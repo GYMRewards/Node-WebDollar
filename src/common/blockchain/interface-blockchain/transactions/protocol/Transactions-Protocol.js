@@ -287,7 +287,7 @@ class InterfaceBlockchainTransactionsProtocol {
 
     propagateNewPendingTransaction(transaction, exceptSockets = []){
 
-        if (!Array.isArray(exceptSockets))
+        if (!Array.isArray(exceptSockets) )
             exceptSockets = [exceptSockets];
 
         if (Blockchain.PoolManagement.poolStarted)
