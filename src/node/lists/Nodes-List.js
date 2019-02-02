@@ -38,13 +38,15 @@ class NodesList {
         let blocksList={};
         let consensusHeightNodes=0;
 
-        if(typeof this.nodes !== "undefined")
-            for(let i=0;i<this.nodes.length;i++)
-                if(typeof this.nodes[i].socket.node.protocol.blocks !== "undefined" && this.nodes[i].socket.node.protocol.blocks !== 0)
-                    if(typeof blocksList[this.nodes[i].socket.node.protocol.blocks] === "undefined")
-                        blocksList[this.nodes[i].socket.node.protocol.blocks]=1;
+        if( this.nodes.length > 0 ) {
+            for (let i = 0; i < this.nodes.length; i++)
+                if (this.nodes[i].socket.node.protocol.blocks && this.nodes[i].socket.node.protocol.blocks > 0)
+                    if ( !blocksList[this.nodes[i].socket.node.protocol.blocks] )
+                        blocksList[this.nodes[i].socket.node.protocol.blocks] = 1;
                     else
                         blocksList[this.nodes[i].socket.node.protocol.blocks]++;
+        } else
+            return false;
 
         for(let key in blocksList)
             if(blocksList[key] > consensusHeightNodes && parseInt(key) >= parseInt(this.consensusBlock)){
@@ -59,9 +61,7 @@ class NodesList {
 
     }
 
-    searchNodeSocketByAddress(sckAddress, connectionType, validationDoubleConnectionsTypes){
-
-        if (connectionType === undefined) connectionType = 'all';
+    searchNodeSocketByAddress(sckAddress, connectionType = 'all', validationDoubleConnectionsTypes){
 
         sckAddress = SocketAddress.createSocketAddress(sckAddress);
 
@@ -72,9 +72,7 @@ class NodesList {
         return null;
     }
 
-    countNodeSocketByAddress(sckAddress, connectionType){
-
-        if (connectionType === undefined) connectionType = "all";
+    countNodeSocketByAddress(sckAddress, connectionType = "all"){
 
         sckAddress = SocketAddress.createSocketAddress(sckAddress);
 
@@ -95,7 +93,7 @@ class NodesList {
 
     async registerUniqueSocket(socket, connectionType, nodeType, nodeConsensusType, validationDoubleConnectionsTypes){
 
-        if (nodeType === undefined) throw {message: "type is necessary"};
+        if ( !nodeType ) throw {message: "type is necessary"};
 
         if (!socket.node || !socket.node.protocol || !socket.node.protocol.helloValidated ) {
             socket.disconnect();
@@ -115,7 +113,7 @@ class NodesList {
 
 
 
-            if (socket.node.protocol.nodeDomain !== undefined && socket.node.protocol.nodeDomain !== '' && ( socket.node.protocol.nodeType === NODE_TYPE.NODE_TERMINAL || socket.node.protocol.nodeType === NODE_TYPE.NODE_WEB_PEER )) {
+            if (socket.node.protocol.nodeDomain  && socket.node.protocol.nodeDomain !== '' && ( socket.node.protocol.nodeType === NODE_TYPE.NODE_TERMINAL || socket.node.protocol.nodeType === NODE_TYPE.NODE_WEB_PEER )) {
 
                 if (socket.node.protocol.nodeDomain.indexOf("my-ip:")>=0)
                     socket.node.protocol.nodeDomain = socket.node.protocol.nodeDomain.replace("my-ip", socket.node.sckAddress.address);
@@ -147,7 +145,7 @@ class NodesList {
     }
 
     //Removing socket from the list (the connection was terminated)
-    async disconnectSocket(socket, connectionType){
+    async disconnectSocket(socket, connectionType = 'all'){
 
         if (socket !== null && !socket.hasOwnProperty("node") ) {
 
@@ -157,15 +155,14 @@ class NodesList {
             return false;
         }
 
-        if (connectionType === undefined) connectionType = 'all';
-
         //console.log("disconnecting", socket, this.nodes);
 
         for (let i=this.nodes.length-1; i>=0; i--)
             if ((this.nodes[i].connectionType === connectionType || connectionType  === "all") &&
                 (this.nodes[i].socket === socket  || this.nodes[i].socket.node.sckAddress.uuid === socket.node.sckAddress.uuid   )) {
 
-                console.error('deleting client socket '+ i +" "+ socket.node.sckAddress.toString());
+                if ( Math.random() < 0.3)
+                    console.error('deleting client socket '+ i +" "+ socket.node.sckAddress.toString());
 
                 let nodeToBeDeleted = this.nodes[i];
                 this.nodes.splice(i, 1);
@@ -183,9 +180,7 @@ class NodesList {
     }
 
     //return the JOIN of the clientSockets and serverSockets
-    getNodesByConnectionType( connectionType, fallback = undefined ){
-
-        if ( connectionType === undefined) connectionType = 'all';
+    getNodesByConnectionType( connectionType = 'all', fallback  ){
 
         let list = [];
 
@@ -203,9 +198,7 @@ class NodesList {
     }
 
     //return the JOIN of the clientSockets and serverSockets
-    getNodesByType(type){
-
-        if ( type === undefined) type = 'all';
+    getNodesByType(type = 'all'){
 
         let list = [];
 
@@ -223,15 +216,13 @@ class NodesList {
     }
 
 
-    countNodesByConnectionType(connectionType, fallback){
-
-        if ( connectionType === undefined) connectionType = 'all';
+    countNodesByConnectionType(connectionType = 'all', fallback){
 
         let count = 0;
 
         for (let i=0; i<this.nodes.length; i++) {
 
-            if (fallback !== undefined && this.nodes[i].isFallback !== fallback) continue;
+            if (fallback  && this.nodes[i].isFallback !== fallback) continue;
 
             if (Array.isArray(connectionType)) { //in case type is an Array
                 if (connectionType.indexOf(this.nodes[i].connectionType) >= 0)
@@ -244,9 +235,7 @@ class NodesList {
         return count;
     }
 
-    countNodesByType(nodeType){
-
-        if ( nodeType === undefined) nodeType = 'all';
+    countNodesByType(nodeType = 'all'){
 
         let count = 0;
 
@@ -269,7 +258,7 @@ class NodesList {
             if (this.nodes[i].socket.disconnected)
                 this.nodes.splice(i,1);
 
-        setTimeout( this.removeDisconnectedSockets.bind(this), 2000);
+        setTimeout( this.removeDisconnectedSockets.bind(this), 5000);
     }
 
     disconnectAllNodes(connectionType = CONNECTION_TYPE.CONNECTION_CLIENT_SOCKET){

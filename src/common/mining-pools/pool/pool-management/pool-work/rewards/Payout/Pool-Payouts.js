@@ -86,7 +86,7 @@ class PoolPayouts{
         for (let i=0; i<this.poolData.blocksInfo.length-1; i++)
             if (this.poolData.blocksInfo[i].confirmed && !this.poolData.blocksInfo[i].payout )
                 if(this.poolData.blocksInfo[i].block)
-                    if ( (BlockchainGenesis.isPoSActivated( this.poolData.blocksInfo[i].block.height ) && paymentType === "pos") ||  ( BlockchainGenesis.isPoSActivated( this.poolData.blocksInfo[i].block.height ) && paymentType === "pow"))
+                    if ( (BlockchainGenesis.isPoSActivated( this.poolData.blocksInfo[i].block.height ) && paymentType === "pos") ||  ( !BlockchainGenesis.isPoSActivated( this.poolData.blocksInfo[i].block.height ) && paymentType === "pow" ) )
                         blocksConfirmed.push(this.poolData.blocksInfo[i]);
 
         console.info("Payout: Blocks confirmed: ", blocksConfirmed.length);
@@ -133,17 +133,22 @@ class PoolPayouts{
                 });
 
                 if ( !totalDifficultyPOW.isEqualTo(blockConfirmed.totalDifficultyPOW)  )
-                    throw { message: "Total POW Difficulty doesn't match", totalDifficultyPOW: totalDifficultyPOW,  blockConfirmedDifficulty: blockConfirmed.totalDifficultyPOW };
+                    console.error( "Total POW Difficulty doesn't match", {totalDifficultyPOW: totalDifficultyPOW,  blockConfirmedDifficulty: blockConfirmed.totalDifficultyPOW });
 
                 if ( !totalDifficultyPOS.isEqualTo(blockConfirmed.totalDifficultyPOS) )
-                    throw { message: "Total POS Difficulty doesn't match", totalDifficultyPOS: totalDifficultyPOS, blockConfirmedDifficulty: blockConfirmed.totalDifficultyPOS };
+                    console.error(  "Total POS Difficulty doesn't match", { totalDifficultyPOS: totalDifficultyPOS, blockConfirmedDifficulty: blockConfirmed.totalDifficultyPOS });
 
-                if ( totalDifficultyPOS.isLessThanOrEqualTo(0) && totalDifficultyPOW.isLessThanOrEqualTo(0) ) {
+                if ( totalDifficultyPOS.isLessThanOrEqualTo(0) && totalDifficultyPOW.isLessThanOrEqualTo(0  ) ) {
 
                     if ( consts.MINING_POOL.SKIP_POS_REWARDS || consts.MINING_POOL.SKIP_POW_REWARDS)
                         return;
 
-                    throw { message: "Total PS and POW are both zero", totalDifficultyPOS: totalDifficultyPOS,  totalDifficultyPOW: totalDifficultyPOW };
+                    console.info("--------------------------");
+                    console.info("TOTAL POS AND POW ARE BOTH ZERO", {totalDifficultyPOS: totalDifficultyPOS,  totalDifficultyPOW: totalDifficultyPOW});
+                    console.info("--------------------------");
+
+                    blockConfirmed.payout = true;
+                    return;
 
                 }
 

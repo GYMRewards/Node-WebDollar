@@ -159,7 +159,19 @@ class PoolWorkManagement{
 
             if ( work.result  ) { //it is a solution and prevBlock is undefined
 
-                if ( await blockInformationMinerInstance.wasBlockMined.apply( blockInformationMinerInstance, [prevBlock].concat( args )  ) ){
+                let wasBlockMined;
+
+                try {
+                    wasBlockMined = await blockInformationMinerInstance.wasBlockMined.apply(blockInformationMinerInstance, [prevBlock].concat(args));
+                } catch (exception){
+                    wasBlockMined = false;
+
+                    //TODO remove !isPOS to throw the error message always
+                    if (!isPos)
+                        throw exception;
+                }
+
+                if ( wasBlockMined ){
 
                     console.warn("----------------------------------------------------------------------------");
                     console.warn("----------------------------------------------------------------------------");
@@ -270,7 +282,13 @@ class PoolWorkManagement{
             if (storeDifficulty) {
 
                 let difficulty = blockInformationMinerInstance.calculateDifficulty( prevBlock, workDone );
-                blockInformationMinerInstance.adjustDifficulty( prevBlock, difficulty, true );
+
+                blockInformationMinerInstance.adjustDifficulty( prevBlock, difficulty, true);
+
+                //be sure that none of the POS blocks were skipped
+                for (let i = Math.max( prevBlock.height - 5,  this.blockchain.blocks.blocksStartingPoint ); i < prevBlock.height + 5; i++)
+                    if ( BlockchainGenesis.isPoSActivated(i) )
+                        blockInformationMinerInstance.adjustDifficulty({height: i}, difficulty, true);
 
                 //statistics
                 this.poolManagement.poolStatistics.addStatistics( difficulty, minerInstance );
@@ -298,13 +316,14 @@ class PoolWorkManagement{
         prevBlock = prevBlock || this.poolWork.lastBlock;
 
         let balance = this.blockchain.accountantTree.getBalance( address );
-        if (balance === null) balance = 0;
+        if ( !balance ) balance = 0;
 
         //must be reverted
         //console.log("2 Before Balance ", balance); let s = "";
         for (let i = prevBlock.height-1; i >= 0 && i >= prevBlock.height -1 - consts.BLOCKCHAIN.POS.MINIMUM_POS_TRANSFERS; i--  ) {
 
             let block = this.blockchain.blocks[ i ];
+            if (!block) continue;
 
             //s += block.height + " ";
 

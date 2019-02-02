@@ -178,7 +178,7 @@ class PoolRewardsManagement{
             if ( this.poolData.blocksInfo[i].payout){
 
                 //let's delete old payouts
-                if ( this.poolData.blocksInfo[i].block === undefined || (this.blockchain.blocks.length - this.poolData.blocksInfo[i].block.height > 40)) {
+                if ( !this.poolData.blocksInfo[i].block || (this.blockchain.blocks.length - this.poolData.blocksInfo[i].block.height > 40)) {
 
                     this.poolManagement.poolStatistics.poolBlocksConfirmedAndPaid++;
                     this.poolManagement.poolStatistics.poolBlocksConfirmed--;
@@ -440,12 +440,13 @@ class PoolRewardsManagement{
 
     redistributePoolDataBlockInformation(blockInformation, index, workType){
 
-        blockInformation.block = undefined; //cancel the block
+        if (!workType)
+            blockInformation.block = undefined; //cancel the block
 
         //move the blockInformationMinerInstances to the latest non solved blockInformation
         let newBlockInformation = this.poolData.lastBlockInformation;
 
-        if ( !newBlockInformation.block )
+        if ( !newBlockInformation || newBlockInformation.block || newBlockInformation === blockInformation )
             newBlockInformation = this.poolData.addBlockInformation();
 
         blockInformation.blockInformationMinersInstances.forEach( (blockInformationMinersInstance)=>{

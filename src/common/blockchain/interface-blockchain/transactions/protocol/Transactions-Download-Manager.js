@@ -66,7 +66,7 @@ class TransactionsDownloadManager{
 
     createTransaction(txId,socket){
 
-        if(txId.length !== consts.BLOCKCHAIN.BLOCKS_POW_LENGTH)
+        if(txId.length !== 64)
             return;
 
         if(this.blockchain.mining.miningTransactionSelector.validateTransactionId(txId)){
