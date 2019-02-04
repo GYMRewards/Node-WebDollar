@@ -23,12 +23,12 @@ class SavingManager{
 
         if (process.env.BROWSER) return;
 
-        if (block === undefined || block === null) return false;
+        if ( !block ) return false;
 
-        if (height === undefined)
+        if ( !height )
             height = block.height;
 
-        if (this._pendingBlocksList[height] === undefined) {
+        if ( !this._pendingBlocksList[height] ) {
 
             this._pendingBlocksList[height] = [{
                 saving: false,
@@ -64,13 +64,7 @@ class SavingManager{
 
             let blocks = this._pendingBlocksList[key];
 
-            if (blocks === undefined){
-                this._pendingBlocksList[key] = undefined;
-                delete this._pendingBlocksList[key];
-                continue;
-            }
-
-            if (blocks.length === 0){
+            if ( !blocks || blocks.length === 0 ){
                 this._pendingBlocksList[key] = undefined;
                 delete this._pendingBlocksList[key];
                 continue;
@@ -83,7 +77,7 @@ class SavingManager{
                 let block = blocks[i];
 
                 //already deleted
-                if (block.block === undefined || block.block.blockchain === undefined){
+                if (!block.block || !block.block.blockchain ){
                     blocks.splice(i,1);
                     i--;
                     continue;
@@ -128,7 +122,11 @@ class SavingManager{
 
     async _saveManager(){
 
-        await this._saveNextBlock();
+        try{
+            await this._saveNextBlock();
+        } catch (exception){
+
+        }
 
         this._timeoutSaveManager = setTimeout( this._saveManager.bind(this), SAVING_MANAGER_INTERVAL );
 
@@ -144,13 +142,13 @@ class SavingManager{
 
         let answer = 1;
 
-        while (answer !== null){
+        while (answer ){
 
             clearTimeout( this._timeoutSaveManager );
 
             answer = await this._saveNextBlock();
 
-            if (answer !== null && answer % 100 === 0) {
+            if (answer && answer % 100 === 0) {
 
                 Log.info("Saving successfully", Log.LOG_TYPE.SAVING_MANAGER, answer);
                 await this.blockchain.sleep(10);

@@ -193,7 +193,8 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
                 if (Math.random () < 0.1)
                     console.log("mining-pool/hello-pool"+"/answer", exception);
 
-                socket.node.sendRequest("mining-pool/hello-pool"+"/answer", {result: false, message: exception.message, } );
+                if (!socket.disconnected)
+                    socket.node.sendRequest("mining-pool/hello-pool"+"/answer", {result: false, message: exception.message, } );
             }
 
         });
@@ -235,12 +236,12 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
         socket.node.on("mining-pool/get-referrals", async (data) => {
 
+            let suffix = "";
             try {
 
                 if (!this.poolManagement._poolStarted) return;
 
                 //in case there is an suffix in the answer
-                let suffix = "";
 
                 if ( data  && typeof data.suffix === "string")
                     suffix = '/'+data.suffix;
@@ -263,6 +264,7 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
         socket.node.on("mining-pool/work-partially-done", async (data) => {
 
+            let suffix = "";
             try{
 
                 if (!this.poolManagement._poolStarted) return;
@@ -270,7 +272,6 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
                 if ( !data  ) return;
 
                 //in case there is an suffix in the answer
-                let suffix = "";
                 if ( typeof data.suffix === "string")
                     suffix = '/'+data.suffix;
 
@@ -290,6 +291,7 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
         socket.node.on("mining-pool/work-done", async (data) => {
 
+            let suffix = "";
             try{
 
                 if (!this.poolManagement._poolStarted) return;
@@ -297,7 +299,6 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
                 if ( !data  ) return;
 
                 //in case there is an suffix in the answer
-                let suffix = "";
                 if ( typeof data.suffix === "string")
                     suffix = '/'+data.suffix;
 
@@ -337,7 +338,7 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
                 if ( typeof data.minerAddress !== "string" ) throw { message: "minerAddress is not correct" };
                 let unencodedAddress = InterfaceBlockchainAddressHelper.getUnencodedAddressFromWIF( data.minerAddress );
-                if (unencodedAddress === null) throw { message: "minerAddress is not correct" };
+                if ( !unencodedAddress ) throw { message: "minerAddress is not correct" };
 
                 if (!Buffer.isBuffer( data.minerAddressPublicKey)  || data.minerAddressPublicKey.length !== consts.ADDRESSES.PUBLIC_KEY.LENGTH) throw {message: "minerPublicKey is invalid"};
                 let minerAddressPublicKey = data.minerAddressPublicKey;
@@ -346,10 +347,13 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
                 if ( typeof data.newMinerAddress !== "string" ) throw { message: "newMinerAddress is not correct" };
                 let newUnencodedAddress = InterfaceBlockchainAddressHelper.getUnencodedAddressFromWIF( data.newMinerAddress );
-                if (newUnencodedAddress === null) throw { message: "newMinerAddress is not correct" };
+                if ( !newUnencodedAddress ) throw { message: "newMinerAddress is not correct" };
+
+                if (newUnencodedAddress.equals(unencodedAddress))
+                    throw {message: "addresses are the same"};
 
                 let miner = this.poolManagement.poolData.findMiner(unencodedAddress);
-                if (miner === null) throw {message: "miner was not found"};
+                if ( !miner ) throw {message: "miner was not found"};
 
                 let message = Buffer.concat([
 
@@ -360,7 +364,7 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
 
                 let minerInstance = socket.node.protocol.minerPool.minerInstance;
-                if (minerInstance === null) throw {message: "minerInstance was not found"};
+                if ( !minerInstance ) throw {message: "minerInstance was not found"};
 
 
                 if ( !Buffer.isBuffer(data.signature) || data.signature.length < 10 ) throw {message: "pool: signature is invalid"};
@@ -370,19 +374,20 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
                 if ( data.type === "only instance" ){
 
-                    miner.removeInstance(minerInstance);
+                    let newMiner = this.poolManagement.poolData.addMiner( newUnencodedAddress );
 
-                    let newMiner = this.poolManagement.poolData.addMiner(newUnencodedAddress );
-                    minerInstance.miner = newMiner;
-                    newMiner.addInstance(minerInstance);
+                    minerInstance = newMiner.addInstance(socket);
+                    socket.node.protocol.minerPool = newMiner;
 
                     miner = newMiner;
 
-                } else if (data.type === "all instances"){
-
-                    miner.address = newUnencodedAddress;
-
-                } else throw {message: "data.type is invalid"};
+                }
+                // not supported anymore
+                // else if (data.type === "all instances"){
+                //
+                //     miner.address = newUnencodedAddress;
+                //
+                // } else throw {message: "data.type is invalid"};
 
 
                 socket.node.sendRequest("mining-pool/change-wallet-mining/answer", {result: true, address: InterfaceBlockchainAddressHelper.generateAddressWIF(miner.address), reward: minerInstance.miner.rewardTotal,  confirmed: minerInstance.miner.rewardConfirmedTotal, refReward: minerInstance.miner.referrals.rewardReferralsTotal, refConfirmed: minerInstance.miner.referrals.rewardReferralsConfirmed } )
